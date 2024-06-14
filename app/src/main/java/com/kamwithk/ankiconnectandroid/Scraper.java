@@ -19,24 +19,32 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// Regular expressions and method source - https://github.com/jamesnicolas/yomichan-forvo-server
 public class Scraper {
     private final Context context;
     private final String SERVER_HOST = "https://forvo.com";
     private final String AUDIO_HTTP_HOST = "https://audio00.forvo.com";
     private final String DEFAULT_FORVO_LANGUAGE = "ja";
+    private HashMap<String, String> queryComponents;
 
-    public Scraper(Context context) {
+    public Scraper(Context context, HashMap<String, String> queryComponents) {
         this.context = context;
+        this.queryComponents = queryComponents;
+    }
+
+    public void setLanguageFromQuery() {
+        if (queryComponents.containsKey("language")) {
+            DEFAULT_FORVO_LANGUAGE = queryComponents.get("language");
+        }
     }
 
     public ArrayList<HashMap<String, String>> scrape(String word, String reading) throws IOException {
+        setLanguageFromQuery(); // Set language from query components
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
         String forvoLanguage = preferences.getString("forvo_language", DEFAULT_FORVO_LANGUAGE);
 
         ArrayList<HashMap<String, String>> audio_sources = scrapeWord(word, forvoLanguage);
 
-//        Get similar words audio if exact word isn't found
+        // Get similar words audio if exact word isn't found
         if (audio_sources.size() == 0) {
             audio_sources = scrapeWord(reading, forvoLanguage);
         }
@@ -57,7 +65,6 @@ public class Scraper {
         ArrayList<HashMap<String, String>> audio_sources = new ArrayList<>();
 
         for (Element element : elements) {
-            //System.out.println(element);
             String url = extractURL(Objects.requireNonNull(element.selectFirst(".play")));
 
             HashMap<String, String> user_details = new HashMap<>();
@@ -85,7 +92,6 @@ public class Scraper {
         return audio_sources;
     }
 
-//    Helper method to get rid of leading/trailing spaces
     private String strip(String input) {
         return input.replaceAll("^[ \t]+|[ \t]+$", "");
     }
@@ -97,7 +103,6 @@ public class Scraper {
         Pattern pattern = Pattern.compile("([^',\\(\\)]+)");
         Matcher m = pattern.matcher(play);
 
-//        Go to third occurrence
         m.find();
         m.find();
         m.find();
